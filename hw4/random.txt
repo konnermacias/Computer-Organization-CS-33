@@ -1,0 +1,16 @@
+Konner Macias | 004603916
+
+A) (float) x == (float) dx
+Yes this is will always yield 1. x and dx will be rounded will be rounded the same way. There is a losss of 32 bits for the double but it will still be equal to the casted version of an int.
+
+B) dx - dy = (double) (x-y)
+No, this wont always yield 1. If x = INT_MAX and y is a negative number the RHS will overflow and wrap around to a lower number since we are assuming -fwrapv. The LHS wont overflow since there is more room for a double.
+
+C) (dx + dy) + dz == dx + (dy + dz)
+Yes this will always yield 1. By casting to a double, we will preserve the precision for all value. Associativity still holds. 
+
+D) (dx * dy) * dz == dx * (dy * dz) 
+No this wont always yield 1. If we multiple two big numbers, it will cause overflow and roudning errors. If dx = 2^28- 1, dy = 2^26, and dz = 2^-1. We know precision can hold up to 2^53 - 1.The LHS is 2^54 initially, but this will produce a rounding error since it pass the maximum number it can represent since we are assuming fwrapv. The RHS will not give us a rounding error since it will produce a precise odd number which is still within the representable range.
+
+E) dx/dx == dz/dz 
+No this is wont always yield 1.  If x = 0, z = 1. dx/dx evaluates to NaN while dz/dz will evaluate to a rounded version of 1.0. NaN compared against any value will always return false.

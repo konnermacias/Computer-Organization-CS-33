@@ -1,0 +1,15 @@
+Question 2.82
+
+A. Doesn't always yield 1! If x is INT_MIN and y = 0 then the LHS x < y is true, but, the RHS is -x > -y is equivalent to x > y since the negation of INT_MIN is the same INT_MIN. So, we get INT_MIN > 0 which is obviously false.
+
+B. Always true! ((x+y) << 4) + y - x = ((x+y)*2^4)) + y - x = (16(x+y)) + y - x = 17y + 15x. So the statement ((x+y)<<4) + y-x) == (17*y + 15*x) always yields 1.
+
+C. Always true! Since we understand that ~x = -x-1, the statement ~x + ~y + 1 =  (-x-1) + (-y-1) + 1 = -1 - x - y. The statement ~(x+y) = -1 - (x + y) = -1 - x - y! Therefore, the expression ~x + ~y + 1 == ~(x+y) always yields 1!
+
+D. Always true! On the LHS, we have the an operation involving two unsigned values so the result will stay unsigned. On the RHS, we have an operation between two signed values, but is casted to an unsigned. So, the RHS: -(unsigned)(y-x) is equivalent now to (ux - uy) since the bits do not change. We have finally (ux-uy) == -(unsigned)(y-x) which always yields 1.
+
+E. Always true! When x is shifted to the right by two and then shifted back by two, possible 1's in x's bit expression could have been shifted off so x could potentially be a little smaller. For example, let's say we had the value 7 which in binary is 111. If we shifted 7 to the right by two and then left by two, we now get 100 which is equivalent to 4. The reason we get zeroes when shifting left is that when we shift left, it's always a logical shift so zeroes are added. We now can understand that x is always at its value or lesser depending on the last two bits in its expression. So, ((x >> 2) << 2) <= x always yields 1.
+
+F. Doesn't always yield true! First, please note that (-1 << 31) produces INT_MIN. So my counter example is when x = -7 which in binary is 100..0111. Let's look at the RHS. ux = 00..0111. So, (ux >> 1) becomes 00..0011. The expression (ux & (-1 << 31)) is equivalent to (ux & INT_MIN). Since ux is unsigned and its sign bit is always zero, the expression (ux & INT_MIN) will produce 00.000. Finally, we have x >> 1 == (ux >> 1) + 00...000 which translates to x >> 1 == ux >> 1 which is incorrect since the signed bits do not match up on both sides. We have 1100...011 on the LHS and 000...011 on the RHS. So, this expression does not always yield 1!
+
+G. Doesn't always yield true! Since x is signed, the LHS can take values ranging from -127 to 127 due to x % 128. The RHS (x & 127) will range only from 0 to 127. Since the range of values do not match up, if x is a negative number the expression does not yield 1.    

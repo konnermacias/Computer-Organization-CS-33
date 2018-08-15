@@ -1,0 +1,42 @@
+Konner Macias | 004603916
+3.64
+A. Extend Equation 3.1 from two dimensions to three to provide a formula for the location of array element A[i][j][k].
+
+Equation 3.1 states that in general, for an array declared as T D[R][C]; array element D[i][j] is at memory address &D[i][j] = x_D + L(C*i + j). Note here that L is the size of data type T in bytes. In our case, we have an array A declared as:
+
+long A[R][S][T]; // where R, S, and T are constants
+
+Our goal is to access array element A[i][j][k]. We can do this by breaking the 3D array into 2D and using the forumula to calculate the location of the desired array element.
+
+We have &A[i][j][k] = x_A + 8((S*T)*i + T*j + k) = x_A + 8(T(S*i+j)+k)
+
+The reason the 8 is there is because it's the L variable which tells the size of data type T in bytes which in our case is a long data type so it's 8 bytes.
+
+B. Use your reverse engineering skills to determine the values of R, S, and T based on the assembly code.
+
+Assembly code and my comments:
+// i in %rdi, j in %rsi, k in %rdx, dest in %rcx
+1 store_ele:
+2 	leaq (%rsi, %rsi, 2), %rax // sets rax to j + 2*j = 3j
+3	leaq (%rsi, %rax, 4), %rax // sets rax to 4*3j + j = 13j
+4	movq %rdi, %rsi // sets rsi to rdi which is i
+5	salq $6, %rsi // rsi is now 2^6 * i = 64*i
+6	addq %rsi, %rdi // add rsi(64*i) to rdi(i), so rdi is now 65*i
+7	addq %rax, %rdi // add rax(13*j) to rdi(65*i), so rdi i now 13*j + 65*i
+8	addq %rdi, %rdx // sdd rdi(13*j + 65*i) to rdx(k), so rdx is 13*j + 65*i + k
+9	movq A(,%rdx,8), %rax // accessing array A with the offset of rdx*8 and storing it to rax. We multiply by 8 bc it's of type long
+10	movq %rax, (%rcx) // this stores what we just got from the array at the address in rcx(dest)
+11	movl $3640, %eax // this is just returning the value 3640 which is the size of A.
+12 	ret
+
+The number of items in array A is 455 which is its size(3640) divided by its data type(long->8). We know since A is a 3D array with constants R, S, and T, that R*S*T = total number of items in array(455).
+
+To solve for R,S,and T we can look at the one dimensional address of the element A[i][j][k] which can be represented as S*T*i + T*j + k. In our case, we figured out that it's represented like 65*i + 13*j + k. Using simple algebra, we find out that T = 13 and S = 5.
+
+Now we can put the pieces of the puzzle together by using R*S*T = 455. Again using simple algebra and plugging in our now known values of T and S, we find that R = 7. 
+
+Perfect! So R = 7, S = 5, and T = 13. 
+
+
+
+

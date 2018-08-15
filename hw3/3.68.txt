@@ -1,0 +1,26 @@
+Konner Macias | 004603916
+Homework 3
+Problem: 3.68
+
+3.68) What are the values of A and B?
+
+First note alignment rules for different data types:
+char -> 1
+short -> 2
+int -> 4
+long -> 8
+
+Note the following:
+ - Since we know that str2.t of type int starts at 8, the B in char array[B] is bounded between values of 5 and 8.
+ - Also we know that str2.u of type long starts at 32, the A in short s[A] is bounded between values 7 and 10. Since s is a short data type array, each one of its members takes up 2 bytes. So really we have 2*A is bounded between values of 14 and 20.
+- Lastly, we know str1.y of type long starts at 184, so the values A*B is bounded between values of 45 and 46. Since x is a 2D array of ints, each one of its members takes up 4 bytes. So really we have 4*A*B is bounded between values of 180 and 184.
+
+Now we can solve!
+We have:
+45 <= A*B <= 46
+5 <= B <= 8
+7 <= A <= 10
+
+Solving for the system of equations, we find that A = 9 and B = 5.
+
+

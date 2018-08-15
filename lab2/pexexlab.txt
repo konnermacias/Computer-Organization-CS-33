@@ -1,0 +1,71 @@
+Konner Macias | 004603916
+Lab: Pexex
+
+Notebook: write down what you did and what happened.
+
+/// notes for trace.tr ///
+
+After connecting to lnxsrv09, I typed in:
+
+1) $ gdb ~eggert/bin64/bin/emacs-25.2
+
+This started gdb the specified folder location. Note that we used the scripting language Elisp of the emacs compiler.
+
+2) (gdb) break Ftimes
+
+This allowed me to set a breakpoint on the desired Ftimes function, which will allow me to step through each instruction. The Ftimes function is located in data.c. This set a breakpoint at 0x544fb0 in file data.c on line 2815.
+
+3) (gdb) set disassemble-next-line on
+
+This gives the assembly-language equivalent of the second column except with a single space separating each column.
+
+4) (gdb) r -Q -batch -eval '(print(* 125028240 -1844255039))'
+
+I accidently typed in this and went all the way through 68 lines of my trace file before realizing my mistake.
+
+5) (gdb) r -Q -batch -eval '(print(* 1250284240 -1844255039))'
+
+This runs the program now with the correct arguments. After putting in the correct statement, we could now step through every instruction of this test case.
+
+6) (gdb) disas
+
+I used this command to look at a dumb of assembler code for function Ftimes to see where the debugger is pointing at.
+
+7) (gdb) si
+
+This is step-into. If the next statement is a call to a procedure, the next statement displayed is the first statement in the procedure. I used this to go through each instruction.
+
+8) (gdb) info registers
+
+This printed the names and values of all registers except floating-point and vector registers.)
+
+9) (gdb) info registers $_
+
+Occasionally, when I wanted to see the relativized value of each specified register $_ ($rax for example), I used this command. 
+
+
+I repeated steps 7 and 8 repeatedly to explore the program execution until I reached the final retq statement in assembly.
+
+/// notes for testovf.txt ///
+
+I initially compiled using gcc -c [optimization_flag] testovf.c and then used:
+objdump -d testovf.o > name.txt
+vim name.txt
+
+to look at the disassembled code. To understand which labels were being used, I re-did everything using
+
+gcc -S [optimization_flag] testovf.c where I was able to get a better look.
+
+
+
+
+
+
+
+
+
+
+
+
+
+

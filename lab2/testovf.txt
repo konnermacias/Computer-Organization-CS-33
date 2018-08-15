@@ -1,0 +1,67 @@
+Konner Macias | 004603916
+
+Purpose: compare the resulting assembly-language files and describe and justify any differences I see. 
+
+Use three different optimizations: -O2, -O2 -fwarpv, -O2 -fsanitize=undefined. I used -S before any of these optimizations!
+
+// -O2 //
+
+testovf:
+   xor    %eax,%eax
+   ret
+
+Description: The compiler optimizes and assumes that no matter the n, this will always be false and overflow can be ignored. So, it uses xor to quickly return 0 which means false. 
+
+// -O2 -fwrapv //
+
+testovf:
+   movabsq $9223372036854775807, %rax
+   addq    %rdi, %rax
+   cmpq    %rdi, %rax
+   setl    %al
+   ret
+
+Description: -fwrapv does the computation as expected! It then compares the results like normal. fwrapv instructs the compiler to assume that signed arithmetic overflow of addition, subtraction and multiplication wraps around using twos-complement representation! So it tells the compiler that signed integer overflow is well defined, it is wrap. Here's what's going on in the assembly code:
+
+We know that n is initially stored in rdi. rax is then set to LONG_MAX and then n is added to it. The addition of the numbers will cause overflow and wrap around to the smallest possible integer value in rax. Now this new rax is compared against n and is of course always true so al is set to 1.
+
+// -O2 -fsanitize=undefined //
+
+testovf:
+        pushq   %rbp
+        pushq   %rbx
+        movabsq $9223372036854775807, %rdx
+        movq    %rdi, %rbp
+        movq    %rdi, %rbx
+        subq    $8, %rsp
+        addq    %rdx, %rbp
+        jo      .L6
+.L2:
+        cmpq    %rbx, %rbp
+        setl    %al
+        addq    $8, %rsp
+        popq    %rbx
+        popq    %rbp
+        ret
+.L6:
+        movq    %rdi, %rsi
+        movl    $.Lubsan_data0, %edi
+        call    __ubsan_handle_add_overflow
+        jmp     .L2
+
+
+Description: -fsanitize=undefined checks for undefined behavior. It modifies the program at compile-time to catch different kinds of undefined behavior during the execution of the program. These undefined behaviors include overflows! Here's what the assembly is doing:
+
+// n in %rdi
+It initially pushes some stack frames. We know n is in rdi, and we see that rdx is set to LONG_MAX. After, rbp and rbx is set to n. rbp is then increased by rdx which makes rbp equal to n + LONG_MAX. It then checks if there is overflow, if so, it jumps to .L6. In .L6, rsi is set to n and we see a move using undefined behavior sanitized which calls the ubsan addition overflow function which will print out the error message. Then it continues to .L2 where we see the comparison as stated in the code. It takes the lower 8 bits as the result and that is returned.
+
+Main Differences:
+1) -02 completely ignores overflow checking and just returns false.
+2) -O2 -fwrapv acknowledges but doesn't care about overflow and just wraps around.
+3) -O2 -fsanitize=undefined does care about overflow and checks whether it exists instead of using it to be true. It will print an error message and continue execution. It then does a comparison and will return undefined behavior based accoridng to compiler's default handling of error cases like overflow.
+
+
+
+
+
+

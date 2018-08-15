@@ -1,0 +1,16 @@
+Konner Macias | 004603916
+
+12.17)
+
+a. The reason why nothing prints is because the program never waits for the peer thread to terminate. The main thread never detects that the thread is terminated so it will just execute exit(0) before the peer thread has the opportunity to print something.
+
+b. We can fix this bug by replacing the exit function with the Pthread function calls of pthread_join or pthread_exit. Pthread_exit will wait for all other peer threads to terminate and then terminates the main thread which is what we wanted. Pthread_join will wait for the peer thread to terminate. 
+
+
+12.25)
+
+echo_cnt is thread safe. Within echo_cnt, it records the cumulative number of bytes received from all clients in a global variable called byte_cnt. Within the echo_cnt function, the accesses to the shared byte_cnt variable are protected by V and P operations. These operations make sure that a running program can never enter a state where a property initialized semaphore has a negative value. This 
+will always produce correct results when called repeatedly from multiple concurrent threads, so it is thread safe.
+
+echo_cnt is not reentrant since it does reference shared data (byte_cnt) when they are called by multiple threads.
+

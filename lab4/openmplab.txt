@@ -1,0 +1,226 @@
+Konner Macias | 004603916
+
+==================
+First I downloaded openmplab.tgz on my local machine then I had to move it over into a SEASnet server using:
+
+scp -r ~/Documents/CS_33/lab4/openmplab/classkon@lnxsrv09.seas.ucla.edu:~
+==================
+Then I logged into my SEASnet server and entered openmplab directory
+
+I used:
+$ make seq
+$ ./seq
+FUNC TIME : 0.501443
+TOTAL TIME : 2.432683
+
+Total time is the overall time of the program where func time is only the time of the function.
+
+Then:
+$ make seq GPROF=1
+gcc -o seq  -O2 -pg filter.c main.c func.c util.c -lm
+$ ./seq
+FUNC TIME : 0.548324
+TOTAL TIME : 2.327972
+
+To let me see the statistics, I ran:
+$ gprof seq
+This gave me huge page of info, I wanted something cleaner and found:
+$ gprof seq | less
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 61.10      0.36     0.36       15    24.03    25.43  func1
+ 18.67      0.47     0.11  5177344     0.00     0.00  rand2
+  6.79      0.51     0.04        1    40.05   129.28  addSeed
+  5.09      0.54     0.03                             sequence
+  1.70      0.55     0.01   491520     0.00     0.00  findIndexBin
+  1.70      0.56     0.01       15     0.67     0.67  func2
+  1.70      0.57     0.01       15     0.67     1.34  func5
+  1.70      0.58     0.01        1    10.01    10.01  imdilateDisk
+  1.70      0.59     0.01                             filter
+  0.00      0.59     0.00   983042     0.00     0.00  round
+  0.00      0.59     0.00       16     0.00     0.00  dilateMatrix
+  0.00      0.59     0.00       15     0.00     0.00  func3
+  0.00      0.59     0.00       15     0.00     0.00  func4
+  0.00      0.59     0.00       15     0.00     0.00  rand1
+  0.00      0.59     0.00        2     0.00     0.00  get_time
+  0.00      0.59     0.00        1     0.00     0.00  elapsed_time
+  0.00      0.59     0.00        1     0.00     0.00  fillMatrix
+  0.00      0.59     0.00        1     0.00     0.00  func0
+  0.00      0.59     0.00        1     0.00     0.00  getNeighbors
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+           else blank.
+
+This gave me insight to see that func1 takes the most time compared to all other function calls. 
+Even with being called so little, it still takes up 61.7% of the cumulative time.
+
+So we will try to optimize func1 first.
+=====================
+I opened func.c and scanned over how each function was written.
+
+I then did my research on using OpenMP to extract parallelism from each function.
+
+I came across the command:
+#pragma omp parallelism for
+- This creates a team of threads so that each thread gets a different section of the for loop and then they execute their own sections in parallel.
+
+For some loops I needed to use
+#pragma omp parallelism for private(variable(s))
+- Since C does not allow variable declaration in loop body, we must specify the loop variable as private.
+
+When I saw a variable being accumulated (+=), I knew I could use:
+#pragma omp parallel for reduction(+: variable(s))
+- reduction is a special directive that instructs the compiler to generate code that accumulate values fron different loop interations together in a certain manner.
+
+I then proceeded to add this pragma statements in func.c for each function.
+=====================
+Then I wanted to compile with OpenMp enabled:
+$ make omp
+gcc -o omp  -O3 -fopenmp filter.c main.c func.c util.c -lm
+$ ./omp
+FUNC TIME : 0.175938
+TOTAL TIME : 2.032775
+
+This only gave me a speedup of 2.63x. I need to do better.
+
+While there may be the possibility that there is a lot of traffic on the SEASnet servers leading to time instabilties, I will try something else.
+=====================
+Now instead of just adding pragma statements, I began to rearrange the physical code so I can utilize code motion.
+
+I tried making sure I used private(..) a little more but I was getting similar times. 
+=====================
+Then I came across the num_threads attribute.
+This explicitly specifies the number of threads to created in the team.
+After trying higher and higher numbers, I found that I could use num_threads(30) in every pragma statement.
+
+Then I checked my new times:
+$ make clean
+rm -f seq omp filter output.txt mtrace.out gprof.out
+$ make omp
+gcc -o omp  -O3 -fopenmp filter.c main.c func.c util.c -lm
+$ ./omp
+FUNC TIME : 0.035380
+TOTAL TIME : 1.901941
+
+Compared to my original function time, I achieved 14x speedup!
+====================
+Then I checked my correctness
+$ make check
+gcc -o omp  -O3 -fopenmp filter.c main.c func.c util.c -lm
+cp omp filter
+./filter
+FUNC TIME : 0.033628
+TOTAL TIME : 1.822760
+diff --brief correct.txt output.txt
+
+This outputs nada so I must have done everything correctly.
+======================
+Checked profile again
+$ make omp GPROF=1
+gcc -o omp  -O2 -pg -fopenmp filter.c main.c func.c util.c -lm
+$ ./omp
+FUNC TIME : 0.148551
+TOTAL TIME : 2.027871
+$ gprof omp | less
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 62.75      0.42     0.42                             filter
+ 17.93      0.54     0.12  4224321     0.00     0.00  rand2
+ 10.46      0.61     0.07    12373     0.01     0.01  findIndexBin
+  4.48      0.64     0.03        1    30.03   149.30  addSeed
+  4.48      0.67     0.03                             sequence
+  0.00      0.67     0.00    37794     0.00     0.00  round
+  0.00      0.67     0.00       16     0.00     0.00  dilateMatrix
+  0.00      0.67     0.00       15     0.00     0.00  func1
+  0.00      0.67     0.00       15     0.00     0.00  func2
+  0.00      0.67     0.00       15     0.00     0.00  func3
+  0.00      0.67     0.00       15     0.00     0.00  func4
+  0.00      0.67     0.00       15     0.00     0.00  func5
+  0.00      0.67     0.00       15     0.00     0.00  rand1
+  0.00      0.67     0.00        2     0.00     0.00  get_time
+  0.00      0.67     0.00        1     0.00     0.00  elapsed_time
+  0.00      0.67     0.00        1     0.00     0.00  fillMatrix
+  0.00      0.67     0.00        1     0.00     0.00  func0
+  0.00      0.67     0.00        1     0.00     0.00  getNeighbors
+  0.00      0.67     0.00        1     0.00     0.00  imdilateDisk
+
+Yes! The functions are no longer a bottleneck for us.
+=========================
+Lastly, we check for memory leaks
+$ make omp MTRACE=1
+gcc -o omp  -O3 -DMTRACE -fopenmp filter.c main.c func.c util.c -lm
+$ ./omp
+FUNC TIME : 0.034285
+TOTAL TIME : 1.848522
+$ make checkmem
+mtrace filter mtrace.out || true
+
+Memory not freed:
+-----------------
+           Address     Size     Caller
+0x0000000001468070   0x1e90  at 0x7f8a6c78f869
+0x0000000001469f10     0xc0  at 0x7f8a6c78f869
+0x0000000001469fe0     0xf8  at 0x7f8a6c78f8b9
+0x000000000146a0e0    0x240  at 0x7f8a6ccbff45
+0x000000000146a330    0x240  at 0x7f8a6ccbff45
+0x000000000146a580    0x240  at 0x7f8a6ccbff45
+0x000000000146a7d0    0x240  at 0x7f8a6ccbff45
+0x000000000146aa20    0x240  at 0x7f8a6ccbff45
+0x000000000146ac70    0x240  at 0x7f8a6ccbff45
+0x000000000146aec0    0x240  at 0x7f8a6ccbff45
+0x000000000146b110    0x240  at 0x7f8a6ccbff45
+0x000000000146b360    0x240  at 0x7f8a6ccbff45
+0x000000000146b5b0    0x240  at 0x7f8a6ccbff45
+0x000000000146b800    0x240  at 0x7f8a6ccbff45
+0x000000000146ba50    0x240  at 0x7f8a6ccbff45
+0x000000000146bca0    0x240  at 0x7f8a6ccbff45
+0x000000000146bef0    0x240  at 0x7f8a6ccbff45
+0x000000000146c140    0x240  at 0x7f8a6ccbff45
+0x000000000146c390    0x240  at 0x7f8a6ccbff45
+0x000000000146c5e0    0x240  at 0x7f8a6ccbff45
+0x000000000146c830    0x240  at 0x7f8a6ccbff45
+0x000000000146ca80    0x240  at 0x7f8a6ccbff45
+0x000000000146ccd0    0x240  at 0x7f8a6ccbff45
+0x000000000146cf20    0x240  at 0x7f8a6ccbff45
+0x000000000146d170    0x240  at 0x7f8a6ccbff45
+0x000000000146d3c0    0x240  at 0x7f8a6ccbff45
+0x000000000146d610    0x240  at 0x7f8a6ccbff45
+0x000000000146d860    0x240  at 0x7f8a6ccbff45
+0x000000000146dab0    0x240  at 0x7f8a6ccbff45
+0x000000000146dd00    0x240  at 0x7f8a6ccbff45
+0x000000000146df50    0x240  at 0x7f8a6ccbff45
+0x000000000146e1a0    0x240  at 0x7f8a6ccbff45
+
+the function at 0x240 has some memory leak issues, it leaks for each of the 30 threads I made.
+
+Essentially gcc gives false alarms on memory leaks when you use OpenMP.
+***This was endorsed by Brian Hill on piazza!***
+==========================
+Check Readibility
+
+$ expand func.c openmplab.txt | awk '/\r/ || 200 < length'
+
+I received no error message so we gucci.
+
+
+

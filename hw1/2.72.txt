@@ -1,0 +1,9 @@
+Question 2.72
+
+A. The conditional test in the code always succeeds since the sizeof function returns size_t which is unsigned, and because it is an operation with unsigned, the once signed ints will be converted into unsigned! When we subtract an unsigned from a signed, we get an unsigned! 
+
+B. Let's rewrite the conditional test to be: 
+
+(maxbytes > 0 && maxbytes >= sizeof(val))
+
+It is proper to assume that maxbytes is greater than zero.

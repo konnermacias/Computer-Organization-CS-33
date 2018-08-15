@@ -1,0 +1,34 @@
+Konner Macias | 004603916
+
+A few more questions
+
+1) Explain why the insns in trace did not produce the correct mathematical result. Which insn caused the problem?
+
+The insn that causes the incorrect mathematical result:
+544dfc	4a 8d 04 a5 02 00 00 00	lea 0x2(,%r12,4),%rax 	rax=7fffffff73ab3b42.
+
+Since %r12=dfffffffdceaced0, it will cause overflow! lea is left shifting by two which causes the overflow. After the left shift, we don't see what happens to rax, but by examining the source code in data.c, Emacs arithmetically right shifts this number back allowing for it to store its tags in by using INTMASK as a mask since overflow occured.
+
+2) Explain why shell command emacs -Q -batch -eval '(print most-negative-fixnum)' outputs -23...3952. where did the number come from?
+
+We know from the previous problem that %r12=dfffffffdceaced0 which in decimal form is the -23...3952 number! most-negative-fixnum is the fixnum closest in value to negative infinity provided by the implementation. fixnum is an integer of type fixnum. In the code, we see:
+Vmost_negative_fixnum = make_number (MOST_NEGATIVE_FIXNUM);
+This grabs the desired most-negative-fixnum for us to print.
+
+3) Explain why shell command emacs -Q -batch -eval '(print (* most-positive-fixnum most-positive-fixnum most-positive-fixnum most-positive-fixnum)' outputs only 1.
+
+emacs -Q -batch -eval '(print (* most-positive-fixnum most-positive-fixnum))' evaluates to 1. Since most-positive-fixnum times most-positive-fixnum, we will of course get 1 for our total. Most-positive-fixnum is 2^n - 1. So (2^n - 1) * (2^n - 1) = 2^n+1 - 2^n+1 + 1 = 1.
+
+4) What would happen to eamcs if we compiled using -fwrapv?
+
+If we used fwrapv there would be no need for overflow checks! This won't cause any runtime error but it won't get us the correct math results. Overflow now wraps around the result. Now, we don't know whether it overflowed.
+
+5) Describe the bug by crashing emacs. 
+
+Running the command:
+~eggert/bin64/bin/emacs-25.2 -Q -batch -eval '(print (format-time-string "%Y-%m-%d %H:%M:%S %Z" nil (concat (make-string 1000 ?X) "0")))'
+gives us:
+*** Error in `/u/cs/fac/eggert/bin64/bin/emacs-25.2': double free or corruption (!prev): 0x0000000003150370 ***
+So the error must be due to double free or corruption as referenced in Piazza. Helpful commands I used to investigate the low-level manifestation included backtrace, backtrace no-filters, and so go through my program from beginning to an error point, I used the command 'start' and 'record' then 'continue' to progress down until the error occured.
+
+
